@@ -1,0 +1,90 @@
+version: '3.9'
+
+services:
+
+  db-mysql:
+    container_name: db-mysql-quarkus
+    image: mysql:8.0.33
+    restart: "no"
+    entrypoint: ["/loadtest-entrypoint.sh"]
+    command:
+      - mysqld
+      # conexões
+      - --max_connections=200
+      - --skip-name-resolve
+      - --mysqlx=OFF
+      # logs off
+      - --general_log=0
+      - --slow_query_log=0
+      - --log_error_verbosity=1
+      - --skip-log-bin
+      - --sync_binlog=0
+      # InnoDB — throughput máximo, sem durabilidade (somente load test)
+      - --innodb_flush_log_at_trx_commit=0
+      - --innodb_flush_method=O_DIRECT_NO_FSYNC
+      - --innodb_doublewrite=0
+      - --transaction-isolation=READ-UNCOMMITTED
+      - --innodb_adaptive_hash_index=OFF
+      - --innodb_change_buffering=none
+      - --innodb_flush_neighbors=0
+      - --innodb_autoinc_lock_mode=2
+      - --innodb_stats_persistent=0
+      - --innodb_stats_on_metadata=0
+      # memória / I/O (tmpfs)
+      - --innodb_buffer_pool_size=1280M
+      - --innodb_buffer_pool_instances=4
+      - --innodb_log_buffer_size=16M
+      - --innodb_redo_log_capacity=32M
+      - --innodb_io_capacity=10000
+      - --innodb_io_capacity_max=20000
+      - --innodb_read_io_threads=8
+      - --innodb_write_io_threads=8
+      # overhead geral
+      - --performance_schema=OFF
+      - --table_open_cache=4000
+      - --thread_cache_size=100
+    tmpfs:
+      - /var/lib/mysql:rw,size=1G,mode=1777
+    deploy:
+      resources:
+        limits:
+          cpus: '8.0'
+          memory: 3G
+    environment:
+      MYSQL_ROOT_PASSWORD: example
+      MYSQL_DATABASE: db
+    volumes:
+      - ./docker/mysql/loadtest-entrypoint.sh:/loadtest-entrypoint.sh:ro
+    ports:
+      - 3306:3306
+    networks:
+      - template-service_default
+    healthcheck:
+      test: ["CMD", "test", "-f", "/tmp/mysql-loadtest-ready"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 30s
+
+  template:
+    container_name: template-quarkus
+    image: docker.io/egripp/quarkus-native-template/template-service:1.0.0
+    depends_on:
+      db-mysql:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 256M
+    environment:
+      QUARKUS_PROFILE: dev
+      QUARKUS_DATASOURCE_JDBC_URL: jdbc:mysql://db-mysql:3306/db
+    ports:
+      - 9090:9090
+    networks:
+      - template-service_default
+
+networks:
+  template-service_default:
+    external: true
