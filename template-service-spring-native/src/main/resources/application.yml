@@ -1,0 +1,236 @@
+---
+server:
+  port: 9090
+  shutdown: graceful
+  forward-headers-strategy: FRAMEWORK
+  tomcat:
+    threads:
+      max: 1000
+
+spring:
+  cloud:
+    inetutils:
+      ignoredInterfaces:
+        - docker0
+        - veth.*
+  application:
+    name: template-service
+
+  profiles:
+    active: local
+      
+  main:
+     allow-bean-definition-overriding: true
+
+  datasource:
+    url: jdbc:mysql://db-mysql:3306/db
+    username: root
+    password: example
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 10
+      connection-timeout: 3000
+  threads:
+    virtual:
+      enabled: true
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
+        cache:
+          use_second_level_cache: false
+          use_query_cache: false
+          region.factory_class: org.hibernate.cache.internal.NoCachingRegionFactory
+        generate_statistics: false
+        jdbc:
+          batch_size: 50
+        order_inserts: true
+        order_updates: true
+  
+#  jackson:
+#    date-format: com.fasterxml.jackson.databind.util.ISO8601DateFormat
+#    serialization.WRITE_DATES_AS_TIMESTAMPS: false
+  
+  servlet:
+    multipart:
+     max-file-size: 10MB
+     max-request-size: 10MB
+
+springdoc:
+  swagger-ui:
+    operationsSorter: alpha
+
+cloud:
+  aws:
+    elasticache:
+        clusters: 
+          - name: product-cache
+            expiration: 100
+          
+
+feign.hystrix.enabled: true
+feign:
+  client:
+    config:
+      default:
+        connectTimeout: 600000000
+        readTimeout: 100000000
+        logger-level: none
+
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "health,info,shutdown"
+  prometheus:
+    metrics:
+      export:
+        enabled: false
+  metrics:
+    enable:
+      all: false
+    tags:
+      application: ${spring.application.name}-${spring.profiles.active}
+  endpoint:
+    shutdown:
+      enabled: true
+      
+logging:
+  pattern:
+    dateformat: dd-MM-yyyy HH:mm:ss.SSS,America/Sao_Paulo   
+  level: 
+    #root: INFO
+    com.example.template: INFO
+
+eureka:
+  client:
+    enabled: false
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+    register-with-eureka: true
+    fetch-registry: true
+    eureka-service-url-poll-interval-seconds: 15
+  instance:
+    preferIpAddress: true  
+
+aws:
+  cognito:
+
+
+---
+spring:
+  config:
+    activate:
+      on-profile: dev
+      
+eureka:
+  client:
+    enabled: false
+          
+---
+spring:
+  config:
+    activate:
+      on-profile: qa
+
+---
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+---
+spring:
+  config:
+    activate:
+      on-profile: test
+  
+eureka:
+  client:
+    enabled: false
+
+---
+  
+spring:
+  config:
+    activate:
+      on-profile: local
+
+  datasource:
+    url: jdbc:mysql://localhost:3306/db
+    username: root
+    password: example
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      idle-timeout: 300000
+      connection-timeout: 20000
+      max-lifetime: 1200000
+    
+  jpa:
+    properties:
+      hibernate:
+        jdbc:
+          batch_size: 50
+        order_inserts: true
+        order_updates: true
+        generate_statistics: false
+        cache:
+          use_second_level_cache: false
+          use_query_cache: false
+          region.factory_class: org.hibernate.cache.internal.NoCachingRegionFactory
+    open-in-view: false
+    
+  main:
+    lazy-initialization: true
+    allow-bean-definition-overriding: true
+    
+server:
+  port: 9090
+  tomcat:
+    threads:
+      max: 200
+      min-spare: 10
+    connection-timeout: 5000
+    max-connections: 10000
+    accept-count: 100
+
+springdoc:
+  swagger-ui:
+    operationsSorter: alpha
+
+eureka:
+  client:
+    enabled: false
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+    register-with-eureka: false
+    
+    
+---
+  
+spring:
+  config:
+    activate:
+      on-profile: docker-local
+
+  datasource:
+    url: jdbc:mysql://host.docker.internal:3306/db
+    username: root
+    password: example
+    
+server:
+  port: 9091
+
+springdoc:
+  swagger-ui:
+    operationsSorter: alpha
+
+eureka:
+  client:
+    enabled: false    
+    
